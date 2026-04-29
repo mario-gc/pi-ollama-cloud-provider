@@ -1,0 +1,38 @@
+{
+  "name": "pi-ollama-cloud-provider",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Ollama Cloud provider extension for pi coding agent with dynamic model discovery",
+  "keywords": [
+    "pi-package"
+  ],
+  "files": [
+    "extensions/",
+    "CHANGELOG.md",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mario-gc/pi-ollama-cloud-provider"
+  },
+  "bugs": {
+    "url": "https://github.com/mario-gc/pi-ollama-cloud-provider/issues"
+  },
+  "homepage": "https://github.com/mario-gc/pi-ollama-cloud-provider#readme",
+  "pi": {
+    "extensions": [
+      "./extensions/ollama-cloud.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*",
+    "@sinclair/typebox": "*"
+  },
+  "devDependencies": {
+    "release-it": "^19.0.4"
+  },
+  "scripts": {
+    "release": "release-it"
+  }
+}

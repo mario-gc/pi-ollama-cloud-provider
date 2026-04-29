@@ -1,0 +1,20 @@
+{
+  "git": {
+    "commitMessage": "chore: release ${version}",
+    "tagName": "v${version}",
+    "tagAnnotation": "Release v${version}"
+  },
+  "github": {
+    "release": true,
+    "releaseName": "v${version}"
+  },
+  "npm": {
+    "publish": true,
+    "publishPath": "."
+  },
+  "hooks": {
+    "before:init": ["echo 'Running pre-release checks...'"],
+    "after:bump": ["echo 'Version bumped to ${version}'"],
+    "after:release": ["echo 'Release ${version} complete'"]
+  }
+}
