@@ -7,9 +7,25 @@
  */
 
 import type { ExtensionAPI, ProviderModelConfig } from "@mariozechner/pi-coding-agent";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { getAgentDir } from "@mariozechner/pi-coding-agent";
 
 const OLLAMA_BASE = "https://ollama.com";
 const FETCH_TIMEOUT_MS = 10_000;
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+// --- Cache types ---
+
+interface CacheEntry {
+  id: string;
+  show: OllamaShowResponse | null;
+}
+
+interface CacheData {
+  timestamp: number;
+  models: CacheEntry[];
+}
 
 // --- API types ---
 
@@ -22,7 +38,40 @@ interface OllamaShowResponse {
   capabilities: string[];
 }
 
-// --- Helpers ---
+// --- Cache helpers ---
+
+function getCacheDir(): string {
+  return join(getAgentDir(), "cache", "ollama-cloud");
+}
+
+function getCacheFile(): string {
+  return join(getCacheDir(), "models.json");
+}
+
+function readCache(): CacheData | null {
+  try {
+    const file = getCacheFile();
+    if (!existsSync(file)) return null;
+    const raw = readFileSync(file, "utf-8");
+    const data = JSON.parse(raw) as CacheData;
+    if (Date.now() - data.timestamp > CACHE_TTL_MS) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(data: CacheData): void {
+  try {
+    const dir = getCacheDir();
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(getCacheFile(), JSON.stringify(data, null, 2));
+  } catch {
+    // Ignore cache write errors
+  }
+}
+
+// --- API helpers ---
 
 function extractContextLength(modelInfo: Record<string, unknown>): number {
   for (const [key, value] of Object.entries(modelInfo)) {
@@ -69,49 +118,77 @@ async function fetchModelShow(
   }
 }
 
+function buildModelConfig(
+  id: string,
+  show: OllamaShowResponse | null,
+): ProviderModelConfig {
+  if (!show) {
+    return {
+      id,
+      name: id,
+      reasoning: false,
+      input: ["text"],
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 128_000,
+      maxTokens: 32_768,
+    };
+  }
+  return {
+    id,
+    name: id,
+    reasoning: show.capabilities?.includes("thinking") ?? false,
+    input: show.capabilities?.includes("vision")
+      ? (["text", "image"] as ("text" | "image")[])
+      : (["text"] as ("text" | "image")[]),
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    contextWindow: extractContextLength(show.model_info ?? {}),
+    maxTokens: 32_768,
+  };
+}
+
 // --- Main ---
 
 export default async function (pi: ExtensionAPI) {
+  // Try to read from cache first
+  const cached = readCache();
+  if (cached) {
+    const models = cached.models.map((entry) =>
+      buildModelConfig(entry.id, entry.show),
+    );
+    registerProvider(pi, models);
+    return;
+  }
+
+  // Cache miss or expired — fetch fresh
   let modelIds: string[];
   try {
     modelIds = await fetchModelIds();
   } catch {
-    // Cannot reach API — skip registration
-    return;
+    return; // Cannot reach API
   }
 
   const results = await Promise.allSettled(
     modelIds.map(async (id) => {
       const show = await fetchModelShow(id);
-      if (!show) {
-        return {
-          id,
-          name: id,
-          reasoning: false,
-          input: ["text"] as ("text" | "image")[],
-          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-          contextWindow: 128_000,
-          maxTokens: 32_768,
-        } satisfies ProviderModelConfig;
-      }
-      return {
-        id,
-        name: id,
-        reasoning: show.capabilities?.includes("thinking") ?? false,
-        input: show.capabilities?.includes("vision")
-          ? (["text", "image"] as ("text" | "image")[])
-          : (["text"] as ("text" | "image")[]),
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-        contextWindow: extractContextLength(show.model_info ?? {}),
-        maxTokens: 32_768,
-      } satisfies ProviderModelConfig;
+      return { id, show };
     }),
   );
 
-  const models = results
-    .filter((r): r is PromiseFulfilledResult<ProviderModelConfig> => r.status === "fulfilled")
-    .map((r) => r.value);
+  const entries: CacheEntry[] = [];
+  const models: ProviderModelConfig[] = [];
 
+  for (const result of results) {
+    if (result.status === "fulfilled") {
+      entries.push(result.value);
+      models.push(buildModelConfig(result.value.id, result.value.show));
+    }
+  }
+
+  writeCache({ timestamp: Date.now(), models: entries });
+  registerProvider(pi, models);
+}
+
+function registerProvider(pi: ExtensionAPI, models: ProviderModelConfig[]) {
   pi.registerProvider("ollama-cloud", {
     baseUrl: `${OLLAMA_BASE}/v1`,
     apiKey: "OLLAMA_CLOUD_API_KEY",

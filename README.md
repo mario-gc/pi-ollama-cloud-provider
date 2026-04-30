@@ -5,6 +5,7 @@ Ollama Cloud provider extension for [pi](https://github.com/badlogic/pi-mono) co
 ## Features
 
 - **Dynamic model discovery** — fetches all available Ollama Cloud models at startup
+- **Persistent cache** — model details cached for 1 hour for instant subsequent startups
 - **Capability detection** — reasoning (thinking) and vision support from `/api/show`
 - **Accurate context windows** — extracted from model metadata, not hardcoded
 - OpenAI-compatible endpoint via `openai-completions` API
@@ -48,7 +49,12 @@ Run `pi --list-models | grep ollama-cloud` to see the full list.
 
 ## How it Works
 
-*(documented as features are implemented)*
+On first startup, the extension fetches the full model list from Ollama Cloud
+and queries `/api/show` for each model to determine capabilities and context length.
+Results are cached at `~/.pi/agent/cache/ollama-cloud/models.json` with a 1-hour TTL.
+
+Subsequent startups within the TTL window use the cached data for instant registration.
+When the cache expires, a fresh fetch is performed automatically.
 
 ## License
 
