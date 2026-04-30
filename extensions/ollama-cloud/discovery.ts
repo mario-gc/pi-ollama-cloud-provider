@@ -1,75 +1,18 @@
 /**
- * Ollama Cloud Provider Extension
+ * Model discovery from the Ollama Cloud API.
  *
- * Registers Ollama Cloud as a model provider with dynamically discovered models.
- *
- * @see https://github.com/mario-gc/pi-ollama-cloud-provider
+ * Uses two endpoints:
+ *   GET  /v1/models    — list of model IDs
+ *   POST /api/show     — per-model details (capabilities, context length)
  */
 
-import type { ExtensionAPI, ProviderModelConfig } from "@mariozechner/pi-coding-agent";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import type { ProviderModelConfig } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { OllamaShowResponse, CacheEntry, CacheData } from "./cache.js";
+import { readCache, writeCache } from "./cache.js";
 
-const OLLAMA_BASE = "https://ollama.com";
+export const OLLAMA_BASE = "https://ollama.com";
 const FETCH_TIMEOUT_MS = 10_000;
-const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-
-// --- Cache types ---
-
-interface CacheEntry {
-  id: string;
-  show: OllamaShowResponse | null;
-}
-
-interface CacheData {
-  timestamp: number;
-  models: CacheEntry[];
-}
-
-// --- API types ---
-
-interface OllamaShowResponse {
-  details: {
-    family: string;
-    parameter_size: string;
-  };
-  model_info: Record<string, unknown>;
-  capabilities: string[];
-}
-
-// --- Cache helpers ---
-
-function getCacheDir(): string {
-  return join(getAgentDir(), "cache", "ollama-cloud");
-}
-
-function getCacheFile(): string {
-  return join(getCacheDir(), "models.json");
-}
-
-function readCache(): CacheData | null {
-  try {
-    const file = getCacheFile();
-    if (!existsSync(file)) return null;
-    const raw = readFileSync(file, "utf-8");
-    const data = JSON.parse(raw) as CacheData;
-    if (Date.now() - data.timestamp > CACHE_TTL_MS) return null;
-    return data;
-  } catch {
-    return null;
-  }
-}
-
-function writeCache(data: CacheData): void {
-  try {
-    const dir = getCacheDir();
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(getCacheFile(), JSON.stringify(data, null, 2));
-  } catch {
-    // Ignore cache write errors
-  }
-}
 
 // --- API helpers ---
 
@@ -97,9 +40,7 @@ async function fetchModelIds(): Promise<string[]> {
   }
 }
 
-async function fetchModelShow(
-  modelId: string,
-): Promise<OllamaShowResponse | null> {
+async function fetchModelShow(modelId: string): Promise<OllamaShowResponse | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -117,6 +58,8 @@ async function fetchModelShow(
     clearTimeout(timeout);
   }
 }
+
+// --- Model assembly ---
 
 function buildModelConfig(
   id: string,
@@ -146,25 +89,53 @@ function buildModelConfig(
   };
 }
 
-// --- Main ---
+export function registerProvider(pi: ExtensionAPI, models: ProviderModelConfig[]) {
+  pi.registerProvider("ollama-cloud", {
+    baseUrl: `${OLLAMA_BASE}/v1`,
+    apiKey: "OLLAMA_CLOUD_API_KEY",
+    api: "openai-completions",
+    compat: {
+      supportsDeveloperRole: false,
+      supportsReasoningEffort: false,
+    },
+    models,
+  });
+}
 
-export default async function (pi: ExtensionAPI) {
-  // Try to read from cache first
-  const cached = readCache();
+// --- Discovery (shared by startup and refresh) ---
+
+export interface DiscoverResult {
+  count: number;
+  failed: number;
+  error?: string;
+}
+
+export async function discoverModels(
+  pi: ExtensionAPI,
+  options: { force?: boolean } = {},
+): Promise<DiscoverResult> {
+  const { force = false } = options;
+
+  // Try cache first (unless forced)
+  const cached = !force ? readCache() : null;
   if (cached) {
     const models = cached.models.map((entry) =>
       buildModelConfig(entry.id, entry.show),
     );
     registerProvider(pi, models);
-    return;
+    return { count: models.length, failed: 0 };
   }
 
-  // Cache miss or expired — fetch fresh
+  // Fetch fresh
   let modelIds: string[];
   try {
     modelIds = await fetchModelIds();
-  } catch {
-    return; // Cannot reach API
+  } catch (err) {
+    return {
+      count: 0,
+      failed: 0,
+      error: err instanceof Error ? err.message : "Unknown error",
+    };
   }
 
   const results = await Promise.allSettled(
@@ -176,27 +147,19 @@ export default async function (pi: ExtensionAPI) {
 
   const entries: CacheEntry[] = [];
   const models: ProviderModelConfig[] = [];
+  let failed = 0;
 
   for (const result of results) {
     if (result.status === "fulfilled") {
       entries.push(result.value);
       models.push(buildModelConfig(result.value.id, result.value.show));
+    } else {
+      failed++;
     }
   }
 
-  writeCache({ timestamp: Date.now(), models: entries });
+  writeCache({ timestamp: Date.now(), models: entries } as CacheData);
   registerProvider(pi, models);
-}
 
-function registerProvider(pi: ExtensionAPI, models: ProviderModelConfig[]) {
-  pi.registerProvider("ollama-cloud", {
-    baseUrl: `${OLLAMA_BASE}/v1`,
-    apiKey: "OLLAMA_CLOUD_API_KEY",
-    api: "openai-completions",
-    compat: {
-      supportsDeveloperRole: false,
-      supportsReasoningEffort: false,
-    },
-    models,
-  });
+  return { count: models.length, failed };
 }
