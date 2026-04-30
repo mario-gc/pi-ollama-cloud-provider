@@ -2,13 +2,12 @@
 
 Ollama Cloud provider extension for [pi](https://github.com/badlogic/pi-mono) coding agent with dynamic model discovery.
 
-> **Status:** Work in progress
-
 ## Features
 
-- Dynamic model discovery from Ollama Cloud API
-- Persistent cache for fast startup
-- Capability detection (reasoning, vision, tools)
+- Ollama Cloud provider registered with dynamic model discovery (coming soon)
+- OpenAI-compatible endpoint via `openai-completions` API
+- Capability-aware: reasoning (thinking) and vision detection per model
+- Zero-cost tracking: Ollama Cloud uses flat subscription pricing
 
 ## Installation
 
@@ -26,8 +25,15 @@ pi install /path/to/pi-ollama-cloud-provider
 ## Quick Start
 
 1. Get an API key from [ollama.com](https://ollama.com)
-2. Set it as `OLLAMA_CLOUD_API_KEY` or add to `~/.pi/agent/auth.json`
-3. Use `/model` to select an Ollama Cloud model
+2. Set it as `OLLAMA_CLOUD_API_KEY` or add to `~/.pi/agent/auth.json`:
+   ```json
+   { "ollama-cloud": { "type": "api_key", "key": "your-key" } }
+   ```
+3. Use `/model` or `Ctrl+P` to select an Ollama Cloud model
+
+## Available Models
+
+*(Models will be dynamically discovered from the Ollama Cloud API in a future release)*
 
 ## Commands
 

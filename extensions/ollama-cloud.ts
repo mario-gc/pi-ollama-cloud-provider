@@ -9,5 +9,13 @@
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
 export default async function (pi: ExtensionAPI) {
-  // TODO: implement dynamic model discovery
+  pi.registerProvider("ollama-cloud", {
+    baseUrl: "https://ollama.com/v1",
+    apiKey: "OLLAMA_CLOUD_API_KEY",
+    api: "openai-completions",
+    compat: {
+      supportsDeveloperRole: false,
+      supportsReasoningEffort: false,
+    },
+  });
 }
