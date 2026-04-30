@@ -45,7 +45,7 @@ Run `pi --list-models | grep ollama-cloud` to see the full list.
 
 | Command | Description |
 |---------|-------------|
-| *(coming soon)* | |
+| `/ollama-cloud` | Interactive menu: refresh models, view status, cache info |
 
 ## How it Works
 
