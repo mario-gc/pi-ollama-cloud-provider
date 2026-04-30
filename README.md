@@ -2,13 +2,15 @@
 
 Ollama Cloud provider extension for [pi](https://github.com/badlogic/pi-mono) coding agent with dynamic model discovery.
 
-> **Status:** Work in progress
+[![npm version](https://img.shields.io/npm/v/pi-ollama-cloud-provider.svg)](https://www.npmjs.com/package/pi-ollama-cloud-provider)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
 
-- Dynamic model discovery from Ollama Cloud API
-- Persistent cache for fast startup
-- Capability detection (reasoning, vision, tools)
+- **8 curated models** from Ollama Cloud, registered as a pi provider
+- **Capability-aware**: reasoning (thinking) and vision detection per model
+- **Zero-cost tracking**: Ollama Cloud uses flat subscription pricing
+- **OpenAI-compatible** endpoint via `openai-completions` API
 
 ## Installation
 
@@ -26,8 +28,24 @@ pi install /path/to/pi-ollama-cloud-provider
 ## Quick Start
 
 1. Get an API key from [ollama.com](https://ollama.com)
-2. Set it as `OLLAMA_CLOUD_API_KEY` or add to `~/.pi/agent/auth.json`
-3. Use `/model` to select an Ollama Cloud model
+2. Set it as `OLLAMA_CLOUD_API_KEY` or add to `~/.pi/agent/auth.json`:
+   ```json
+   { "ollama-cloud": { "type": "api_key", "key": "your-key" } }
+   ```
+3. Use `/model` or `Ctrl+P` to select an Ollama Cloud model
+
+## Available Models
+
+| Model | Reasoning | Vision | Context |
+|-------|-----------|--------|---------|
+| GLM 5.1 | ✅ | — | 202K |
+| Qwen3.5 397B | ✅ | ✅ | 262K |
+| DeepSeek V4 Pro | ✅ | — | 1M |
+| DeepSeek V4 Flash | ✅ | — | 1M |
+| Kimi K2.6 | ✅ | ✅ | 262K |
+| GPT OSS 120B | ✅ | — | 131K |
+| Gemma 3 4B | — | ✅ | 131K |
+| MiniMax M2.7 | ✅ | — | 196K |
 
 ## Commands
 
