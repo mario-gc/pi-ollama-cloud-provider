@@ -4,8 +4,12 @@
   "type": "module",
   "description": "Ollama Cloud provider extension for pi coding agent with dynamic model discovery",
   "keywords": [
-    "pi-package"
+    "pi-package",
+    "pi",
+    "extension",
+    "ollama-cloud"
   ],
+  "license": "MIT",
   "files": [
     "extensions/",
     "CHANGELOG.md",
@@ -26,11 +30,10 @@
   },
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*",
-    "@mariozechner/pi-tui": "*",
-    "@sinclair/typebox": "*"
+    "@mariozechner/pi-tui": "*"
   },
   "devDependencies": {
-    "release-it": "^19.0.4"
+    "release-it": "^20.0.1"
   },
   "scripts": {
     "release": "release-it"
