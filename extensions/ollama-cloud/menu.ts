@@ -8,16 +8,33 @@ import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-cod
 import { getSettingsListTheme, Theme } from "@mariozechner/pi-coding-agent";
 import { Container, type Component, type SettingItem, SettingsList } from "@mariozechner/pi-tui";
 import { discoverModels, registerProvider, OLLAMA_BASE } from "./discovery.js";
-import { readCache, getCacheInfo } from "./cache.js";
+import { readCache, getCacheInfo, type ModelSource } from "./cache.js";
 
 // --- Status submenu ---
 
 function buildStatusSubmenu(
   settingsTheme: ReturnType<typeof getSettingsListTheme>,
   modelCount: number,
+  sources: Record<ModelSource, number>,
   done: () => void,
 ): Component {
   const cacheInfo = getCacheInfo();
+
+  const sourceLabels: Record<ModelSource, string> = {
+    ollama: "Ollama API",
+    modelsdev: "models.dev",
+    inference: "inference",
+  };
+
+  const sourceItems: SettingItem[] = Object.entries(sources)
+    .filter(([, count]) => count > 0)
+    .map(([key, count]) => ({
+      id: `src_${key}`,
+      label: sourceLabels[key as ModelSource],
+      currentValue: String(count),
+      values: [String(count)],
+      description: `${count} model${count > 1 ? "s" : ""} sourced from ${sourceLabels[key as ModelSource]}`,
+    }));
 
   const items: SettingItem[] = [
     {
@@ -25,8 +42,9 @@ function buildStatusSubmenu(
       label: "Registered Models",
       currentValue: String(modelCount),
       values: [String(modelCount)],
-      description: "Total models registered from Ollama Cloud API",
+      description: `Total models registered from Ollama Cloud API`,
     },
+    ...sourceItems,
     {
       id: "endpoint",
       label: "API Endpoint",
@@ -54,10 +72,64 @@ function buildStatusSubmenu(
 
   return new SettingsList(
     items,
-    Math.min(items.length + 2, 8),
+    Math.min(items.length + 2, 10),
     settingsTheme,
     () => {},
     done,
+  );
+}
+
+// --- Refresh submenu ---
+
+function buildRefreshSubmenu(
+  pi: ExtensionAPI,
+  settingsTheme: ReturnType<typeof getSettingsListTheme>,
+  notify: ExtensionCommandContext["ui"]["notify"],
+  setWorkingMessage: ExtensionCommandContext["ui"]["setWorkingMessage"],
+  subDone: () => void,
+  onRebuild: (comp: Component) => void,
+): Component {
+  const items: SettingItem[] = [
+    {
+      id: "ollama",
+      label: "From Ollama API",
+      currentValue: "→",
+      values: ["→"],
+      description: "Fetch /api/show for all models, fallback to models.dev if needed",
+    },
+    {
+      id: "modelsdev",
+      label: "From models.dev",
+      currentValue: "→",
+      values: ["→"],
+      description: "Bypass /api/show, use models.dev metadata directly",
+    },
+  ];
+
+  return new SettingsList(
+    items,
+    4,
+    settingsTheme,
+    async (id) => {
+      setWorkingMessage("Refreshing Ollama Cloud models...");
+      const mode = id === "modelsdev" ? "modelsdev" : "ollama";
+      const result = await discoverModels(pi, { force: true, mode });
+      setWorkingMessage();
+      subDone();
+      onRebuild(
+        buildMainMenu(pi, settingsTheme, settingsTheme, notify, setWorkingMessage, () => {}, onRebuild),
+      );
+      if (result.error) {
+        notify(`Refresh failed: ${result.error}`, "error");
+      } else {
+        const sourceSummary = Object.entries(result.sources)
+          .filter(([, count]) => count > 0)
+          .map(([key, count]) => `${count} ${key}`)
+          .join(", ");
+        notify(`Registered ${result.count} models (${sourceSummary})`, "info");
+      }
+    },
+    () => {},
   );
 }
 
@@ -75,22 +147,31 @@ export function buildMainMenu(
   const cacheInfo = getCacheInfo();
   const cached = readCache();
   const modelCount = cached ? cached.models.length : 0;
+  const sources = cached ? cached.models.reduce(
+    (acc, entry) => { acc[entry.source]++; return acc; },
+    { ollama: 0, modelsdev: 0, inference: 0 } as Record<ModelSource, number>,
+  ) : { ollama: 0, modelsdev: 0, inference: 0 };
 
   const items: SettingItem[] = [
     {
       id: "refresh",
       label: "Refresh Models",
-      currentValue: "→",
-      values: ["→"],
-      description: "Force-fetch model list from the API and update cache",
+      currentValue: "submenu",
+      description: "Update model list from Ollama API or models.dev",
+      submenu: (_currentValue, subDone) =>
+        buildRefreshSubmenu(pi, settingsTheme, notify, setWorkingMessage, subDone, (next) => {
+          onRebuild(
+            buildMainMenu(pi, tuiTheme, settingsTheme, notify, setWorkingMessage, done, onRebuild),
+          );
+        }),
     },
     {
       id: "status",
       label: "Status",
       currentValue: "submenu",
-      description: "View connection info, cache status, and model count",
+      description: "View connection info, source breakdown, and cache status",
       submenu: (_currentValue, subDone) =>
-        buildStatusSubmenu(settingsTheme, modelCount, () => {
+        buildStatusSubmenu(settingsTheme, modelCount, sources, () => {
           subDone();
           onRebuild(
             buildMainMenu(pi, tuiTheme, settingsTheme, notify, setWorkingMessage, done, onRebuild),
@@ -125,25 +206,7 @@ export function buildMainMenu(
       items,
       Math.min(items.length + 2, 8),
       settingsTheme,
-      async (id) => {
-        if (id === "refresh") {
-          setWorkingMessage("Refreshing Ollama Cloud models...");
-          const result = await discoverModels(pi, { force: true });
-          setWorkingMessage();
-          if (result.error) {
-            notify(`Refresh failed: ${result.error}`, "error");
-          } else {
-            notify(
-              `Registered ${result.count} models${result.failedApi > 0 ? ` (${result.failedApi} from fallback)` : ""}`,
-              "info",
-            );
-          }
-          // Rebuild menu to show updated cache info
-          onRebuild(
-            buildMainMenu(pi, tuiTheme, settingsTheme, notify, setWorkingMessage, done, onRebuild),
-          );
-        }
-      },
+      () => {},
       done,
     );
   }
