@@ -56,6 +56,17 @@ Results are cached at `~/.pi/agent/cache/ollama-cloud/models.json` with a 1-hour
 Subsequent startups within the TTL window use the cached data for instant registration.
 When the cache expires, a fresh fetch is performed automatically.
 
+### Fallback Chain
+
+If `/api/show` fails for a model (network issue, rate limit, new model not yet indexed),
+metadata is resolved through a fallback chain:
+
+1. **https://models.dev/api.json** — fetches the `ollama-cloud` section (cached for 24h)
+2. **Name-based inference** — pattern matching on model ID (e.g. `kimi-*` → 262K context, reasoning)
+3. **Safe defaults** — 128K context, text-only, no reasoning
+
+All fallbacks use zero cost since Ollama Cloud uses flat subscription pricing.
+
 ## License
 
 MIT

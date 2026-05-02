@@ -134,7 +134,7 @@ export function buildMainMenu(
             notify(`Refresh failed: ${result.error}`, "error");
           } else {
             notify(
-              `Registered ${result.count} models${result.failed > 0 ? ` (${result.failed} failed)` : ""}`,
+              `Registered ${result.count} models${result.failedApi > 0 ? ` (${result.failedApi} from fallback)` : ""}`,
               "info",
             );
           }
