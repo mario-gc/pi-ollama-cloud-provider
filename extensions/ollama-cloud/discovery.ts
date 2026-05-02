@@ -5,11 +5,15 @@
  *   1. POST /api/show          — capabilities, context length (primary)
  *   2. https://models.dev/api.json — fallback if /api/show fails
  *   3. Name-based inference    — last resort
+ *
+ * Discovery modes:
+ *   "ollama"    — try /api/show first, fallback to models.dev (default)
+ *   "modelsdev" — bypass /api/show, use models.dev data directly
  */
 
 import type { ProviderModelConfig } from "@mariozechner/pi-coding-agent";
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import type { OllamaShowResponse, CacheEntry, CacheData } from "./cache.js";
+import type { OllamaShowResponse, CacheEntry, CacheData, ModelSource } from "./cache.js";
 import { readCache, writeCache } from "./cache.js";
 import {
   getModelsDevData,
@@ -67,20 +71,20 @@ async function fetchModelShow(modelId: string): Promise<OllamaShowResponse | nul
   }
 }
 
-// --- Fallback resolution (lazy: only fetched when needed) ---
+// --- Fallback resolution ---
 
-async function resolveFallback(
+function resolveFallback(
   id: string,
   modelsDevData: Map<string, ModelsDevModelData> | null,
-): Promise<ResolvedModelData> {
-  // Priority 1: models.dev exact match (only if data was fetched)
+): { data: ResolvedModelData; source: Exclude<ModelSource, "ollama"> } {
+  // Priority 1: models.dev exact match
   if (modelsDevData) {
     const fromModelsDev = resolveFromModelsDev(id, modelsDevData);
-    if (fromModelsDev) return fromModelsDev;
+    if (fromModelsDev) return { data: fromModelsDev, source: "modelsdev" };
   }
 
   // Priority 2: name-based inference
-  return inferFromName(id);
+  return { data: inferFromName(id), source: "inference" };
 }
 
 // --- Model assembly ---
@@ -89,24 +93,22 @@ function buildModelConfig(
   id: string,
   show: OllamaShowResponse | null,
   fallback: ResolvedModelData,
+  source: ModelSource,
 ): ProviderModelConfig {
   let contextWindow: number;
-  let maxTokens: number;
   let reasoning: boolean;
   let input: ("text" | "image")[];
 
   if (show) {
     // Primary: real /api/show data
     contextWindow = extractContextLength(show.model_info ?? {});
-    maxTokens = fallback.maxTokens; // /api/show doesn't provide max output
     reasoning = show.capabilities?.includes("thinking") ?? false;
     input = show.capabilities?.includes("vision")
       ? ["text", "image"]
       : ["text"];
   } else {
-    // Fallback: models.dev or name inference
+    // Fallback data
     contextWindow = fallback.contextWindow;
-    maxTokens = fallback.maxTokens;
     reasoning = fallback.reasoning;
     input = fallback.input;
   }
@@ -118,7 +120,10 @@ function buildModelConfig(
     input,
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     contextWindow,
-    maxTokens,
+    maxTokens: fallback.maxTokens,
+    compat: source === "inference"
+      ? { supportsDeveloperRole: false, supportsReasoningEffort: false }
+      : undefined,
   };
 }
 
@@ -137,37 +142,69 @@ export function registerProvider(pi: ExtensionAPI, models: ProviderModelConfig[]
 
 // --- Discovery (shared by startup and refresh) ---
 
+export type DiscoveryMode = "ollama" | "modelsdev";
+
 export interface DiscoverResult {
   count: number;
-  failedApi: number;
+  sources: Record<ModelSource, number>;
   error?: string;
 }
 
 export async function discoverModels(
   pi: ExtensionAPI,
-  options: { force?: boolean } = {},
+  options: { force?: boolean; mode?: DiscoveryMode } = {},
 ): Promise<DiscoverResult> {
-  const { force = false } = options;
+  const { force = false, mode = "ollama" } = options;
+
+  // MODE: models.dev only — bypass /api/show entirely
+  if (mode === "modelsdev") {
+    const modelsDevData = await getModelsDevData();
+    if (modelsDevData.size === 0) {
+      return {
+        count: 0,
+        sources: { ollama: 0, modelsdev: 0, inference: 0 },
+        error: "models.dev data unavailable",
+      };
+    }
+
+    const entries: CacheEntry[] = [];
+    const models: ProviderModelConfig[] = [];
+    const sources: Record<ModelSource, number> = { ollama: 0, modelsdev: 0, inference: 0 };
+
+    for (const [id, data] of modelsDevData) {
+      const resolved = resolveFromModelsDev(id, modelsDevData)!;
+      const config = buildModelConfig(id, null, resolved, "modelsdev");
+      entries.push({ id, show: null, source: "modelsdev" });
+      models.push(config);
+      sources.modelsdev++;
+    }
+
+    writeCache({ timestamp: Date.now(), models: entries });
+    registerProvider(pi, models);
+    return { count: models.length, sources };
+  }
+
+  // MODE: ollama (default) — try /api/show first
 
   // Try cache first (unless forced)
   const cached = !force ? readCache() : null;
   if (cached) {
-    // Check if any cached entries are missing /api/show data
     const needsFallback = cached.models.some((entry) => !entry.show);
-
     let modelsDevData: Map<string, ModelsDevModelData> | null = null;
     if (needsFallback) {
-      // Only fetch models.dev if at least one model needs fallback
       modelsDevData = await getModelsDevData();
     }
 
     const models: ProviderModelConfig[] = [];
+    const sources: Record<ModelSource, number> = { ollama: 0, modelsdev: 0, inference: 0 };
     for (const entry of cached.models) {
-      const fallback = await resolveFallback(entry.id, modelsDevData);
-      models.push(buildModelConfig(entry.id, entry.show, fallback));
+      const { data: fallback, source } = await resolveFallback(entry.id, modelsDevData);
+      const actualSource = entry.show ? "ollama" : source;
+      models.push(buildModelConfig(entry.id, entry.show, fallback, actualSource));
+      sources[actualSource]++;
     }
     registerProvider(pi, models);
-    return { count: models.length, failedApi: needsFallback ? 1 : 0 };
+    return { count: models.length, sources };
   }
 
   // Fetch fresh
@@ -177,12 +214,12 @@ export async function discoverModels(
   } catch (err) {
     return {
       count: 0,
-      failedApi: 0,
+      sources: { ollama: 0, modelsdev: 0, inference: 0 },
       error: err instanceof Error ? err.message : "Unknown error",
     };
   }
 
-  // Step 1: Try /api/show for ALL models (primary)
+  // Step 1: Try /api/show for ALL models
   const results = await Promise.allSettled(
     modelIds.map(async (id) => {
       const show = await fetchModelShow(id);
@@ -210,26 +247,27 @@ export async function discoverModels(
     modelsDevData = await getModelsDevData();
   }
 
-  // Step 4: Build configs
+  // Step 4: Build configs with source tracking
   const entries: CacheEntry[] = [];
   const models: ProviderModelConfig[] = [];
+  const sources: Record<ModelSource, number> = { ollama: 0, modelsdev: 0, inference: 0 };
 
-  // Successful models
   for (const { id, show } of successes) {
-    const fallback = await resolveFallback(id, modelsDevData);
-    entries.push({ id, show });
-    models.push(buildModelConfig(id, show, fallback));
+    const { data: fallback } = await resolveFallback(id, modelsDevData);
+    entries.push({ id, show, source: "ollama" });
+    models.push(buildModelConfig(id, show, fallback, "ollama"));
+    sources.ollama++;
   }
 
-  // Failed models
   for (const id of failedIds) {
-    const fallback = await resolveFallback(id, modelsDevData);
-    entries.push({ id, show: null });
-    models.push(buildModelConfig(id, null, fallback));
+    const { data: fallback, source } = await resolveFallback(id, modelsDevData);
+    entries.push({ id, show: null, source });
+    models.push(buildModelConfig(id, null, fallback, source));
+    sources[source]++;
   }
 
-  writeCache({ timestamp: Date.now(), models: entries } as CacheData);
+  writeCache({ timestamp: Date.now(), models: entries });
   registerProvider(pi, models);
 
-  return { count: models.length, failedApi: failedIds.length };
+  return { count: models.length, sources };
 }

@@ -13,6 +13,8 @@ export const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 // --- Types ---
 
+export type ModelSource = "ollama" | "modelsdev" | "inference";
+
 export interface OllamaShowResponse {
   details: {
     family: string;
@@ -25,6 +27,7 @@ export interface OllamaShowResponse {
 export interface CacheEntry {
   id: string;
   show: OllamaShowResponse | null;
+  source: ModelSource;
 }
 
 export interface CacheData {
@@ -72,10 +75,11 @@ export function getCacheInfo(): {
   age: string | null;
   size: string | null;
   modelCount: number;
+  sources: Record<ModelSource, number>;
 } {
   const file = getCacheFile();
   if (!existsSync(file)) {
-    return { exists: false, age: null, size: null, modelCount: 0 };
+    return { exists: false, age: null, size: null, modelCount: 0, sources: { ollama: 0, modelsdev: 0, inference: 0 } };
   }
   try {
     const raw = readFileSync(file, "utf-8");
@@ -86,13 +90,20 @@ export function getCacheInfo(): {
     const age = hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
     const sizeBytes = Buffer.byteLength(raw);
     const size = sizeBytes > 1024 ? `${(sizeBytes / 1024).toFixed(1)} KB` : `${sizeBytes} B`;
+
+    const sources: Record<ModelSource, number> = { ollama: 0, modelsdev: 0, inference: 0 };
+    for (const entry of data.models) {
+      sources[entry.source]++;
+    }
+
     return {
       exists: true,
       age,
       size,
       modelCount: data.models.length,
+      sources,
     };
   } catch {
-    return { exists: false, age: null, size: null, modelCount: 0 };
+    return { exists: false, age: null, size: null, modelCount: 0, sources: { ollama: 0, modelsdev: 0, inference: 0 } };
   }
 }

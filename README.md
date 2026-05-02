@@ -47,6 +47,14 @@ Run `pi --list-models | grep ollama-cloud` to see the full list.
 |---------|-------------|
 | `/ollama-cloud` | Interactive menu: refresh models, view status, cache info |
 
+### Menu Options
+
+- **Refresh Models** — submenu with two sources:
+  - *From Ollama API* — fetches `/api/show` for all models (fallback to models.dev)
+  - *From models.dev* — bypasses `/api/show`, uses models.dev metadata directly
+- **Status** — shows model count, source breakdown, API endpoint, cache info
+- **Cache Info** — cache age, size, and model count
+
 ## How it Works
 
 On first startup, the extension fetches the full model list from Ollama Cloud
