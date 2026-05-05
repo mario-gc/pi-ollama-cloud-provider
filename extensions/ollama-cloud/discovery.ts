@@ -23,6 +23,12 @@ import {
   type ResolvedModelData,
 } from "./fallback.js";
 
+// --- Offline check ---
+
+function isOffline(): boolean {
+  return process.env.PI_OFFLINE === "1" || process.env.PI_OFFLINE === "true";
+}
+
 export const OLLAMA_BASE = "https://ollama.com";
 const FETCH_TIMEOUT_MS = 10_000;
 
@@ -85,6 +91,17 @@ function resolveFallback(
 
   // Priority 2: name-based inference
   return { data: inferFromName(id), source: "inference" };
+}
+
+/**
+ * Offline fallback resolution — uses only name-based inference (no network).
+ * Uses the cached source if the entry already has one, but still resolves
+ * the actual model config data via inferFromName for entries with show:null.
+ */
+function resolveFallbackOffline(
+  entry: CacheEntry,
+): { data: ResolvedModelData; source: Exclude<ModelSource, "ollama"> } {
+  return { data: inferFromName(entry.id), source: entry.source === "ollama" ? "inference" : entry.source };
 }
 
 // --- Model assembly ---
@@ -155,6 +172,28 @@ export async function discoverModels(
   options: { force?: boolean; mode?: DiscoveryMode } = {},
 ): Promise<DiscoverResult> {
   const { force = false, mode = "ollama" } = options;
+
+  // OFFLINE MODE: use only cached data, no network calls
+  if (isOffline()) {
+    const cached = readCache({ ignoreTTL: true });
+    if (cached) {
+      const models: ProviderModelConfig[] = [];
+      const sources: Record<ModelSource, number> = { ollama: 0, modelsdev: 0, inference: 0 };
+      for (const entry of cached.models) {
+        const { data: fallback, source } = resolveFallbackOffline(entry);
+        const actualSource = entry.show ? "ollama" : (entry.source !== "ollama" ? entry.source : source);
+        models.push(buildModelConfig(entry.id, entry.show, fallback, actualSource));
+        sources[actualSource]++;
+      }
+      registerProvider(pi, models);
+      return { count: models.length, sources };
+    }
+    return {
+      count: 0,
+      sources: { ollama: 0, modelsdev: 0, inference: 0 },
+      error: "Offline mode: no cached models available",
+    };
+  }
 
   // MODE: models.dev only — bypass /api/show entirely
   if (mode === "modelsdev") {

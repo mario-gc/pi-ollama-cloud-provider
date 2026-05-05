@@ -44,13 +44,13 @@ function getModelsDevCacheFile(): string {
   return join(dir, "models-dev.json");
 }
 
-function readModelsDevCache(): Map<string, ModelsDevModelData> | null {
+function readModelsDevCache(options?: { ignoreTTL?: boolean }): Map<string, ModelsDevModelData> | null {
   try {
     const file = getModelsDevCacheFile();
     if (!existsSync(file)) return null;
     const raw = readFileSync(file, "utf-8");
     const data = JSON.parse(raw) as { timestamp: number; models: Record<string, ModelsDevModelData> };
-    if (Date.now() - data.timestamp > MODELS_DEV_TTL_MS) return null;
+    if (!options?.ignoreTTL && Date.now() - data.timestamp > MODELS_DEV_TTL_MS) return null;
     return new Map(Object.entries(data.models));
   } catch {
     return null;
@@ -74,7 +74,17 @@ function writeModelsDevCache(models: Record<string, ModelsDevModelData>): void {
 
 let modelsDevCache: Map<string, ModelsDevModelData> | null | "loading" | "failed" = null;
 
+function isOffline(): boolean {
+  return process.env.PI_OFFLINE === "1" || process.env.PI_OFFLINE === "true";
+}
+
 export async function getModelsDevData(): Promise<Map<string, ModelsDevModelData>> {
+  // OFFLINE MODE: use disk cache (even if expired), never fetch
+  if (isOffline()) {
+    const diskOffline = readModelsDevCache({ ignoreTTL: true });
+    return diskOffline ?? new Map();
+  }
+
   if (modelsDevCache && modelsDevCache !== "loading" && modelsDevCache !== "failed") {
     return modelsDevCache;
   }

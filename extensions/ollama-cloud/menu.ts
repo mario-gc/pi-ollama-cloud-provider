@@ -18,6 +18,7 @@ function buildStatusSubmenu(
   sources: Record<ModelSource, number>,
   done: () => void,
 ): Component {
+  const isOffline = process.env.PI_OFFLINE === "1" || process.env.PI_OFFLINE === "true";
   const cacheInfo = getCacheInfo();
 
   const sourceLabels: Record<ModelSource, string> = {
@@ -37,6 +38,15 @@ function buildStatusSubmenu(
     }));
 
   const items: SettingItem[] = [
+    {
+      id: "mode",
+      label: "Mode",
+      currentValue: isOffline ? "Offline" : "Online",
+      values: [isOffline ? "offline" : "online"],
+      description: isOffline
+        ? "PI_OFFLINE=1 — no network calls; using cached data only"
+        : "Online — normal operation with live API calls",
+    },
     {
       id: "models",
       label: "Registered Models",
@@ -144,6 +154,7 @@ export function buildMainMenu(
   done: () => void,
   onRebuild: (comp: Component) => void,
 ): Component {
+  const isOffline = process.env.PI_OFFLINE === "1" || process.env.PI_OFFLINE === "true";
   const cacheInfo = getCacheInfo();
   const cached = readCache();
   const modelCount = cached ? cached.models.length : 0;
@@ -181,11 +192,15 @@ export function buildMainMenu(
     {
       id: "cache_info",
       label: "Cache Info",
-      currentValue: cacheInfo.exists ? `${cacheInfo.age} ago` : "Empty",
+      currentValue: cacheInfo.exists ? `${cacheInfo.age} ago` : (isOffline ? "Not cached" : "Empty"),
       values: [cacheInfo.exists ? "hit" : "miss"],
-      description: cacheInfo.exists
-        ? `${cacheInfo.modelCount} models cached, ${cacheInfo.size}`
-        : "No cache — will fetch fresh on next discovery",
+      description: isOffline
+        ? (cacheInfo.exists
+            ? `Offline mode — using cached data regardless of TTL`
+            : `Offline mode — no cached data available; models may not load`)
+        : (cacheInfo.exists
+            ? `${cacheInfo.modelCount} models cached, ${cacheInfo.size}`
+            : "No cache — will fetch fresh on next discovery"),
     },
   ];
 
@@ -193,7 +208,8 @@ export function buildMainMenu(
   container.addChild(
     new (class {
       render(_width: number) {
-        return [tuiTheme.fg("accent", tuiTheme.bold("Ollama Cloud")), ""];
+        const title = isOffline ? tuiTheme.fg("accent", tuiTheme.bold("Ollama Cloud (offline)")) : tuiTheme.fg("accent", tuiTheme.bold("Ollama Cloud"));
+        return [title, ""];
       }
       invalidate() {}
     })(),

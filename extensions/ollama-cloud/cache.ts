@@ -47,13 +47,13 @@ function getCacheFile(): string {
 
 // --- I/O ---
 
-export function readCache(): CacheData | null {
+export function readCache(options?: { ignoreTTL?: boolean }): CacheData | null {
   try {
     const file = getCacheFile();
     if (!existsSync(file)) return null;
     const raw = readFileSync(file, "utf-8");
     const data = JSON.parse(raw) as CacheData;
-    if (Date.now() - data.timestamp > CACHE_TTL_MS) return null;
+    if (!options?.ignoreTTL && Date.now() - data.timestamp > CACHE_TTL_MS) return null;
     return data;
   } catch {
     return null;
