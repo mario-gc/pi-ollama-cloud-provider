@@ -121,6 +121,15 @@ function buildRefreshSubmenu(
     4,
     settingsTheme,
     async (id) => {
+      // Offline guard — should not be reachable, but handle defensively
+      if (process.env.PI_OFFLINE === "1" || process.env.PI_OFFLINE === "true") {
+        notify("Cannot refresh: offline mode", "error");
+        subDone();
+        onRebuild(
+          buildMainMenu(pi, settingsTheme, settingsTheme, notify, setWorkingMessage, () => {}, onRebuild),
+        );
+        return;
+      }
       setWorkingMessage("Refreshing Ollama Cloud models...");
       const mode = id === "modelsdev" ? "modelsdev" : "ollama";
       const result = await discoverModels(pi, { force: true, mode });
@@ -163,19 +172,29 @@ export function buildMainMenu(
     { ollama: 0, modelsdev: 0, inference: 0 } as Record<ModelSource, number>,
   ) : { ollama: 0, modelsdev: 0, inference: 0 };
 
+  const refreshItem: SettingItem = isOffline
+    ? {
+        id: "refresh",
+        label: "Refresh Models",
+        currentValue: "Unavailable",
+        values: ["unavailable"],
+        description: "Offline mode — network calls are disabled",
+      }
+    : {
+        id: "refresh",
+        label: "Refresh Models",
+        currentValue: "submenu",
+        description: "Update model list from Ollama API or models.dev",
+        submenu: (_currentValue, subDone) =>
+          buildRefreshSubmenu(pi, settingsTheme, notify, setWorkingMessage, subDone, (next) => {
+            onRebuild(
+              buildMainMenu(pi, tuiTheme, settingsTheme, notify, setWorkingMessage, done, onRebuild),
+            );
+          }),
+      };
+
   const items: SettingItem[] = [
-    {
-      id: "refresh",
-      label: "Refresh Models",
-      currentValue: "submenu",
-      description: "Update model list from Ollama API or models.dev",
-      submenu: (_currentValue, subDone) =>
-        buildRefreshSubmenu(pi, settingsTheme, notify, setWorkingMessage, subDone, (next) => {
-          onRebuild(
-            buildMainMenu(pi, tuiTheme, settingsTheme, notify, setWorkingMessage, done, onRebuild),
-          );
-        }),
-    },
+    refreshItem,
     {
       id: "status",
       label: "Status",
