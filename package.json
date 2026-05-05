@@ -1,6 +1,6 @@
 {
   "name": "pi-ollama-cloud-provider",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "Ollama Cloud provider extension for pi coding agent with dynamic model discovery",
   "keywords": [

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- 
+
+### Changed
+- 
+
+### Fixed
+- 
+
+## [0.2.0] - 2026-05-05
+
+### Added
 - Offline mode (`PI_OFFLINE=1`) — uses cached data only, no network calls
 - Cache reads ignore TTL when offline, gracefully handle missing cache
 - Offline indicator in `/ollama-cloud` menu header and status view
