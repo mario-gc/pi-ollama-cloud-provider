@@ -31,11 +31,5 @@
   "peerDependencies": {
     "@mariozechner/pi-coding-agent": "*",
     "@mariozechner/pi-tui": "*"
-  },
-  "devDependencies": {
-    "release-it": "^20.0.1"
-  },
-  "scripts": {
-    "release": "release-it"
   }
 }
