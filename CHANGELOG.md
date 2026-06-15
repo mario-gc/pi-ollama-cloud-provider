@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Fixed
 - 
 
+## [0.3.0] - 2026-06-15
+
+### Changed
+- Migrated all package references from `@mariozechner/*` to `@earendil-works/*` scope (pi v0.74.0+)
+
 ## [0.2.0] - 2026-05-05
 
 ### Added

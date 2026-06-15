@@ -11,8 +11,8 @@
  *   "modelsdev" — bypass /api/show, use models.dev data directly
  */
 
-import type { ProviderModelConfig } from "@mariozechner/pi-coding-agent";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ProviderModelConfig } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { OllamaShowResponse, CacheEntry, CacheData, ModelSource } from "./cache.js";
 import { readCache, writeCache } from "./cache.js";
 import {

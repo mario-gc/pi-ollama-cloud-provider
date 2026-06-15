@@ -6,8 +6,8 @@
  * @see https://github.com/mario-gc/pi-ollama-cloud-provider
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { getSettingsListTheme } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { getSettingsListTheme } from "@earendil-works/pi-coding-agent";
 import { discoverModels } from "./discovery.js";
 import { buildMainMenu } from "./menu.js";
 
