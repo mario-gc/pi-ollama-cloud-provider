@@ -1,12 +1,12 @@
 /**
  * Interactive TUI menu for the /ollama-cloud command.
  *
- * Uses SettingsList from @mariozechner/pi-tui for native pi menu behavior.
+ * Uses SettingsList from @earendil-works/pi-tui for native pi menu behavior.
  */
 
-import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-import { getSettingsListTheme, Theme } from "@mariozechner/pi-coding-agent";
-import { Container, type Component, type SettingItem, SettingsList } from "@mariozechner/pi-tui";
+import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import { getSettingsListTheme, Theme } from "@earendil-works/pi-coding-agent";
+import { Container, type Component, type SettingItem, SettingsList } from "@earendil-works/pi-tui";
 import { discoverModels, registerProvider, OLLAMA_BASE } from "./discovery.js";
 import { readCache, getCacheInfo, type ModelSource } from "./cache.js";
 

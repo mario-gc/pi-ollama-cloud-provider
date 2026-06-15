@@ -7,7 +7,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { getAgentDir } from "@mariozechner/pi-coding-agent";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
 const MODELS_DEV_URL = "https://models.dev/api.json";
 const MODELS_DEV_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
