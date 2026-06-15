@@ -147,7 +147,7 @@ function buildModelConfig(
 export function registerProvider(pi: ExtensionAPI, models: ProviderModelConfig[]) {
   pi.registerProvider("ollama-cloud", {
     baseUrl: `${OLLAMA_BASE}/v1`,
-    apiKey: "OLLAMA_CLOUD_API_KEY",
+    apiKey: "$OLLAMA_CLOUD_API_KEY",
     api: "openai-completions",
     compat: {
       supportsDeveloperRole: false,
