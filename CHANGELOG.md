@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Changed
 - Migrated all package references from `@mariozechner/*` to `@earendil-works/*` scope (pi v0.74.0+)
 
+### Fixed
+- Changed apiKey to use $-prefixed env var syntax ("$OLLAMA_CLOUD_API_KEY") to eliminate deprecation warning
+
 ## [0.2.0] - 2026-05-05
 
 ### Added
