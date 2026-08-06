@@ -22,6 +22,7 @@ import {
   type ModelsDevModelData,
   type ResolvedModelData,
 } from "./fallback.js";
+import { buildThinkingLevelMap } from "./thinking-levels.js";
 
 // --- Offline check ---
 
@@ -130,16 +131,22 @@ function buildModelConfig(
     input = fallback.input;
   }
 
+  // Build thinkingLevelMap from models.dev reasoning_options
+  const thinkingLevelMap = reasoning
+    ? buildThinkingLevelMap(fallback.reasoning_options)
+    : undefined;
+
   return {
     id,
     name: id,
     reasoning,
+    thinkingLevelMap,
     input,
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     contextWindow,
     maxTokens: fallback.maxTokens,
     compat: source === "inference"
-      ? { supportsDeveloperRole: false, supportsReasoningEffort: false }
+      ? { supportsDeveloperRole: false, supportsReasoningEffort: true }
       : undefined,
   };
 }
@@ -151,7 +158,7 @@ export function registerProvider(pi: ExtensionAPI, models: ProviderModelConfig[]
     api: "openai-completions",
     compat: {
       supportsDeveloperRole: false,
-      supportsReasoningEffort: false,
+      supportsReasoningEffort: true,
     },
     models,
   });
@@ -228,11 +235,7 @@ export async function discoverModels(
   // Try cache first (unless forced)
   const cached = !force ? readCache() : null;
   if (cached) {
-    const needsFallback = cached.models.some((entry) => !entry.show);
-    let modelsDevData: Map<string, ModelsDevModelData> | null = null;
-    if (needsFallback) {
-      modelsDevData = await getModelsDevData();
-    }
+    const modelsDevData = await getModelsDevData(); // always fetch for reasoning_options
 
     const models: ProviderModelConfig[] = [];
     const sources: Record<ModelSource, number> = { ollama: 0, modelsdev: 0, inference: 0 };
@@ -280,11 +283,8 @@ export async function discoverModels(
     }
   }
 
-  // Step 3: Only fetch models.dev if there are failures
-  let modelsDevData: Map<string, ModelsDevModelData> | null = null;
-  if (failedIds.length > 0) {
-    modelsDevData = await getModelsDevData();
-  }
+  // Step 3: Always fetch models.dev for reasoning_options (not just on failure)
+  const modelsDevData = await getModelsDevData();
 
   // Step 4: Build configs with source tracking
   const entries: CacheEntry[] = [];
