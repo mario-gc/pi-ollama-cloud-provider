@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- 
+- Max thinking level support — models that support `max` reasoning effort
+  (e.g., deepseek-v4-pro, minimax-m3, kimi-k3) now show `max` in pi's
+  thinking level selector
+- Per-model thinking level detection from models.dev `reasoning_options` —
+  each model exposes only the thinking levels it actually supports
 
 ### Changed
-- 
-
-### Fixed
-- 
+- models.dev is now always fetched at startup (not just as a fallback) to
+  obtain per-model thinking level metadata (`reasoning_options`)
+- `supportsReasoningEffort` set to `true` — pi now sends `reasoning_effort`
+  to Ollama Cloud's OpenAI-compatible endpoint
 
 ## [0.3.0] - 2026-06-15
 

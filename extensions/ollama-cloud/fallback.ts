@@ -15,9 +15,15 @@ const FETCH_TIMEOUT_MS = 15_000;
 
 // --- Types ---
 
+export interface ReasoningOption {
+  type: "toggle" | "effort";
+  values?: string[]; // present when type === "effort"
+}
+
 export interface ModelsDevModelData {
   name: string;
   reasoning: boolean;
+  reasoning_options?: ReasoningOption[];
   limit?: {
     context?: number;
     output?: number;
@@ -34,6 +40,7 @@ export interface ResolvedModelData {
   maxTokens: number;
   reasoning: boolean;
   input: ("text" | "image")[];
+  reasoning_options?: ReasoningOption[]; // NEW — passed through for thinkingLevelMap
 }
 
 // --- Cache ---
@@ -153,10 +160,10 @@ export function inferFromName(modelId: string): ResolvedModelData {
   const lower = modelId.toLowerCase();
   for (const rule of NAME_RULES) {
     if (lower.includes(rule.pattern)) {
-      return { contextWindow: rule.contextWindow, maxTokens: rule.maxTokens, reasoning: rule.reasoning, input: ["text"] };
+      return { contextWindow: rule.contextWindow, maxTokens: rule.maxTokens, reasoning: rule.reasoning, input: ["text"], reasoning_options: undefined };
     }
   }
-  return { contextWindow: 128_000, maxTokens: 32_768, reasoning: false, input: ["text"] };
+  return { contextWindow: 128_000, maxTokens: 32_768, reasoning: false, input: ["text"], reasoning_options: undefined };
 }
 
 // --- Resolve from models.dev (only called when /api/show failed) ---
@@ -177,5 +184,6 @@ export function resolveFromModelsDev(
     maxTokens: entry.limit?.output ?? 32_768,
     reasoning: entry.reasoning ?? false,
     input,
+    reasoning_options: entry.reasoning_options,
   };
 }
