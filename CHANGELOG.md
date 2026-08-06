@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- 
+
+### Changed
+- 
+
+### Fixed
+- 
+
+## [0.4.0] - 2026-08-06
+
+### Added
 - Max thinking level support — models that support `max` reasoning effort
   (e.g., deepseek-v4-pro, minimax-m3, kimi-k3) now show `max` in pi's
   thinking level selector
