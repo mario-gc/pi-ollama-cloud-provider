@@ -93,6 +93,7 @@ function buildStatusSubmenu(
 
 function buildRefreshSubmenu(
   pi: ExtensionAPI,
+  tuiTheme: Theme,
   settingsTheme: ReturnType<typeof getSettingsListTheme>,
   notify: ExtensionCommandContext["ui"]["notify"],
   setWorkingMessage: ExtensionCommandContext["ui"]["setWorkingMessage"],
@@ -126,7 +127,7 @@ function buildRefreshSubmenu(
         notify("Cannot refresh: offline mode", "error");
         subDone();
         onRebuild(
-          buildMainMenu(pi, settingsTheme, settingsTheme, notify, setWorkingMessage, () => {}, onRebuild),
+          buildMainMenu(pi, tuiTheme, settingsTheme, notify, setWorkingMessage, () => {}, onRebuild),
         );
         return;
       }
@@ -136,7 +137,7 @@ function buildRefreshSubmenu(
       setWorkingMessage();
       subDone();
       onRebuild(
-        buildMainMenu(pi, settingsTheme, settingsTheme, notify, setWorkingMessage, () => {}, onRebuild),
+        buildMainMenu(pi, tuiTheme, settingsTheme, notify, setWorkingMessage, () => {}, onRebuild),
       );
       if (result.error) {
         notify(`Refresh failed: ${result.error}`, "error");
@@ -186,7 +187,7 @@ export function buildMainMenu(
         currentValue: "submenu",
         description: "Update model list from Ollama API or models.dev",
         submenu: (_currentValue, subDone) =>
-          buildRefreshSubmenu(pi, settingsTheme, notify, setWorkingMessage, subDone, (next) => {
+          buildRefreshSubmenu(pi, tuiTheme, settingsTheme, notify, setWorkingMessage, subDone, (next) => {
             onRebuild(
               buildMainMenu(pi, tuiTheme, settingsTheme, notify, setWorkingMessage, done, onRebuild),
             );
