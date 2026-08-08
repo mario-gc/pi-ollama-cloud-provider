@@ -187,7 +187,7 @@ describe("resolveFromModelsDev", () => {
         reasoning: true,
         limit: { context: 256_000, output: 131_072 },
         modalities: { input: ["text"] },
-        reasoning_options: [{ type: "toggle" }, { type: "effort", values: ["high", "max"] }],
+        reasoning_options: [{ type: "toggle" as const }, { type: "effort" as const, values: ["high", "max"] }],
       }],
     ]);
     const result = resolveFromModelsDev("reasoning-model", data);
