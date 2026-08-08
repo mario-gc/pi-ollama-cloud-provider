@@ -145,9 +145,7 @@ function buildModelConfig(
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
     contextWindow,
     maxTokens: fallback.maxTokens,
-    compat: source === "inference"
-      ? { supportsDeveloperRole: false, supportsReasoningEffort: true }
-      : undefined,
+    compat: { supportsDeveloperRole: false, supportsReasoningEffort: true },
   };
 }
 
@@ -156,10 +154,6 @@ export function registerProvider(pi: ExtensionAPI, models: ProviderModelConfig[]
     baseUrl: `${OLLAMA_BASE}/v1`,
     apiKey: "$OLLAMA_CLOUD_API_KEY",
     api: "openai-completions",
-    compat: {
-      supportsDeveloperRole: false,
-      supportsReasoningEffort: true,
-    },
     models,
   });
 }
@@ -275,7 +269,7 @@ export async function discoverModels(
 
   for (const result of results) {
     if (result.status === "fulfilled" && result.value.show) {
-      successes.push(result.value);
+      successes.push({ id: result.value.id, show: result.value.show });
     } else if (result.status === "fulfilled") {
       failedIds.push(result.value.id);
     } else {

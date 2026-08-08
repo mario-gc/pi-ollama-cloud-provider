@@ -198,7 +198,7 @@ Context windows come from `/api/show` (primary) or models.dev (fallback). If you
 
 ### "400 developer is not one of ['system', 'assistant', 'user', 'tool']" error
 
-Some Ollama Cloud models may reject the `developer` message role. The extension sets `compat.supportsDeveloperRole: false` at the provider level to prevent this. If you still see this error, report it as an issue.
+Some Ollama Cloud models may reject the `developer` message role. The extension applies `compat.supportsDeveloperRole: false` to each registered model to prevent this. If you still see this error, report it as an issue.
 
 ## How is this different from `ollama launch pi`?
 
