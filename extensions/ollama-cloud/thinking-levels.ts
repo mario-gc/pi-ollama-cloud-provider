@@ -1,5 +1,5 @@
 import type { ProviderModelConfig } from "@earendil-works/pi-coding-agent";
-import type { ReasoningOption } from "./fallback.js";
+import type { ReasoningOption } from "./fallback.ts";
 
 export type ThinkingLevelMap = NonNullable<ProviderModelConfig["thinkingLevelMap"]>;
 

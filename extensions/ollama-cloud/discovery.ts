@@ -13,16 +13,16 @@
 
 import type { ProviderModelConfig } from "@earendil-works/pi-coding-agent";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { OllamaShowResponse, CacheEntry, CacheData, ModelSource } from "./cache.js";
-import { readCache, writeCache } from "./cache.js";
+import type { OllamaShowResponse, CacheEntry, CacheData, ModelSource } from "./cache.ts";
+import { readCache, writeCache } from "./cache.ts";
 import {
   getModelsDevData,
   resolveFromModelsDev,
   inferFromName,
   type ModelsDevModelData,
   type ResolvedModelData,
-} from "./fallback.js";
-import { buildThinkingLevelMap } from "./thinking-levels.js";
+} from "./fallback.ts";
+import { buildThinkingLevelMap } from "./thinking-levels.ts";
 
 // --- Offline check ---
 

@@ -7,8 +7,8 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { getSettingsListTheme, Theme } from "@earendil-works/pi-coding-agent";
 import { Container, type Component, type SettingItem, SettingsList } from "@earendil-works/pi-tui";
-import { discoverModels, registerProvider, OLLAMA_BASE } from "./discovery.js";
-import { readCache, getCacheInfo, type ModelSource } from "./cache.js";
+import { discoverModels, registerProvider, OLLAMA_BASE } from "./discovery.ts";
+import { readCache, getCacheInfo, type ModelSource } from "./cache.ts";
 
 // --- Status submenu ---
 
