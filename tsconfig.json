@@ -1,0 +1,7 @@
+{
+  "extends": ["@tsconfig/node24/tsconfig.json", "@tsconfig/node-ts/tsconfig.json"],
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["extensions/**/*.ts", "tests/**/*.ts"]
+}
