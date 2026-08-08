@@ -5,6 +5,7 @@ Ollama Cloud provider extension for [pi](https://github.com/badlogic/pi-mono) co
 [![npm version](https://img.shields.io/npm/v/pi-ollama-cloud-provider.svg)](https://www.npmjs.com/package/pi-ollama-cloud-provider)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![pi-package](https://img.shields.io/badge/pi--package-yes-brightgreen)](https://pi.dev/packages)
+[![CI](https://img.shields.io/github/actions/workflow/status/mario-gc/pi-ollama-cloud-provider/ci.yml)](https://github.com/mario-gc/pi-ollama-cloud-provider/actions/workflows/ci.yml)
 
 ## Features
 
@@ -231,9 +232,18 @@ cd pi-ollama-cloud-provider
 # Install dependencies
 npm install
 
-# Test locally
+# Type-check the extension
+npm run typecheck
+
+# Run unit tests
+npm test
+
+# Test locally in pi
 pi install /path/to/pi-ollama-cloud-provider
 ```
+
+CI runs type checking, unit tests, and package validation on every push to
+`main` and every pull request.
 
 ### Project structure
 

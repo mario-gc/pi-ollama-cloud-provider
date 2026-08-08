@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- 
+- GitHub Actions CI pipeline — type checking (`tsc --noEmit`), unit tests
+  (`node --test`), and package validation (`npm pack --dry-run`) on every push
+  to `main` and every pull request
+- Unit test suite for discovery, fallback, cache, and thinking-levels logic
+  (61 tests, zero dependencies, deterministic — no network calls)
 
 ### Changed
 - Provider compat flags (`supportsDeveloperRole: false`, `supportsReasoningEffort: true`) moved from provider-level to per-model — all registered models now carry the flags, matching documented intent
