@@ -8,8 +8,8 @@
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { getSettingsListTheme } from "@earendil-works/pi-coding-agent";
-import { discoverModels } from "./discovery.js";
-import { buildMainMenu } from "./menu.js";
+import { discoverModels } from "./discovery.ts";
+import { buildMainMenu } from "./menu.ts";
 
 export default async function (pi: ExtensionAPI) {
   // Register provider on startup (uses cache if available)
