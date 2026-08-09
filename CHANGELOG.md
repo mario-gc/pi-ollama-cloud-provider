@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Fixed 4 pre-existing TypeScript type errors that prevented `tsc --noEmit` from passing: `compat` on `ProviderConfig` (not a valid provider-level field), `successes.push` type narrowing, `SettingsListTheme`/`Theme` mismatch in refresh submenu
+- Startup no longer blocks on a slow or unreachable models.dev when the
+  fallback cache is expired — stale cache is served immediately and refreshed
+  in the background (stale-while-revalidate), and the cache TTL was raised
+  from 24h to 7 days. Thanks to [@pi-dal](https://github.com/pi-dal) for the
+  contribution ([#20](https://github.com/mario-gc/pi-ollama-cloud-provider/pull/20)).
 
 ## [0.4.0] - 2026-08-06
 
