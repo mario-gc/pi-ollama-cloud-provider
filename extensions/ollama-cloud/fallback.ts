@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { getAgentDir } from "@earendil-works/pi-coding-agent";
 
 const MODELS_DEV_URL = "https://models.dev/api.json";
-const MODELS_DEV_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MODELS_DEV_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (metadata changes rarely)
 const FETCH_TIMEOUT_MS = 15_000;
 
 // --- Types ---
@@ -103,14 +103,24 @@ export async function getModelsDevData(): Promise<Map<string, ModelsDevModelData
     return modelsDevCache === "failed" ? new Map() : modelsDevCache!;
   }
 
-  // Try disk cache
+  // Try disk cache (fresh)
   const disk = readModelsDevCache();
   if (disk) {
     modelsDevCache = disk;
     return disk;
   }
 
-  // Fetch from API
+  // Stale-while-revalidate: serve stale cache immediately and refresh in the
+  // background. Avoids blocking agent startup on a network fetch to models.dev
+  // (which was adding ~5s to every launch when the 24h cache expired).
+  const stale = readModelsDevCache({ ignoreTTL: true });
+  if (stale) {
+    modelsDevCache = stale;
+    void refreshModelsDevCache();
+    return stale;
+  }
+
+  // No cache at all (first run) — must fetch synchronously
   modelsDevCache = "loading";
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -126,6 +136,28 @@ export async function getModelsDevData(): Promise<Map<string, ModelsDevModelData
   } catch {
     modelsDevCache = "failed";
     return new Map();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// --- Background refresh (stale-while-revalidate) ---
+// Fetches models.dev data without blocking the caller. Updates the in-memory
+// cache and disk cache on success; on failure leaves the stale cache in place
+// so the next startup retries.
+async function refreshModelsDevCache(): Promise<void> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(MODELS_DEV_URL, { signal: controller.signal });
+    if (!res.ok) return;
+    const data = (await res.json()) as Record<string, unknown>;
+    const ollamaCloud = data["ollama-cloud"] as { models?: Record<string, ModelsDevModelData> };
+    const models = ollamaCloud?.models ?? {};
+    writeModelsDevCache(models);
+    modelsDevCache = new Map(Object.entries(models));
+  } catch {
+    // Keep stale cache; next startup will retry.
   } finally {
     clearTimeout(timeout);
   }
