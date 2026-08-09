@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- 
+
+### Changed
+- 
+
+### Fixed
+- 
+
+## [0.5.0] - 2026-08-09
+
+### Added
 - GitHub Actions CI pipeline — type checking (`tsc --noEmit`), unit tests
   (`node --test`), and package validation (`npm pack --dry-run`) on every push
   to `main` and every pull request
