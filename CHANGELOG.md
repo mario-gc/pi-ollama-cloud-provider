@@ -11,13 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (`node --test`), and package validation (`npm pack --dry-run`) on every push
   to `main` and every pull request
 - Unit test suite for discovery, fallback, cache, and thinking-levels logic
-  (61 tests, zero dependencies, deterministic — no network calls)
+  (67 tests, zero dependencies, deterministic — no network calls), and the
+  models.dev stale-while-revalidate path (TTL boundary, background refresh
+  success/failure, first-run fetch)
 
 ### Changed
-- Provider compat flags (`supportsDeveloperRole: false`, `supportsReasoningEffort: true`) moved from provider-level to per-model — all registered models now carry the flags, matching documented intent
+- Provider compat flags (`supportsDeveloperRole: false`,
+  `supportsReasoningEffort: true`) moved from provider-level to per-model —
+  all registered models now carry the flags, matching documented intent
 
 ### Fixed
-- Fixed 4 pre-existing TypeScript type errors that prevented `tsc --noEmit` from passing: `compat` on `ProviderConfig` (not a valid provider-level field), `successes.push` type narrowing, `SettingsListTheme`/`Theme` mismatch in refresh submenu
+- Fixed 4 pre-existing TypeScript type errors that prevented `tsc --noEmit`
+  from passing: `compat` on `ProviderConfig` (not a valid provider-level
+  field), `successes.push` type narrowing, `SettingsListTheme`/`Theme`
+  mismatch in refresh submenu
 - Startup no longer blocks on a slow or unreachable models.dev when the
   fallback cache is expired — stale cache is served immediately and refreshed
   in the background (stale-while-revalidate), and the cache TTL was raised

@@ -2,7 +2,7 @@
  * Fallback metadata from https://models.dev/api.json
  *
  * Fetches the ollama-cloud section on-demand when /api/show fails.
- * Cached locally with 24h TTL.
+ * Cached locally with 7-day TTL; expired cache is served stale and refreshed in the background.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -112,7 +112,7 @@ export async function getModelsDevData(): Promise<Map<string, ModelsDevModelData
 
   // Stale-while-revalidate: serve stale cache immediately and refresh in the
   // background. Avoids blocking agent startup on a network fetch to models.dev
-  // (which was adding ~5s to every launch when the 24h cache expired).
+  // (which was adding ~5s to every launch when the cache expired).
   const stale = readModelsDevCache({ ignoreTTL: true });
   if (stale) {
     modelsDevCache = stale;
