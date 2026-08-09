@@ -11,7 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   (`node --test`), and package validation (`npm pack --dry-run`) on every push
   to `main` and every pull request
 - Unit test suite for discovery, fallback, cache, and thinking-levels logic
-  (61 tests, zero dependencies, deterministic — no network calls)
+  (67 tests, zero dependencies, deterministic — no network calls), and the
+  models.dev stale-while-revalidate path (TTL boundary, background refresh
+  success/failure, first-run fetch)
 
 ### Changed
 - Provider compat flags (`supportsDeveloperRole: false`, `supportsReasoningEffort: true`) moved from provider-level to per-model — all registered models now carry the flags, matching documented intent
